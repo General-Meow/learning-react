@@ -49,6 +49,7 @@ class MyProductDescription extends React.Component {
 - React automatically updates the component every time data changes (in this case the `{this...}` bit)
 - React components (like the above) take properties or `props` for short then returns a `hierarchy of views` via the render method
   - When you compose components you attach `props` by adding properties to the html tag e.g. <CustomComp aPropertyThatGoesOnProps='x'>
+  - In other words, `props` are provided by parent Components and shouldn't really be modified by the child component
   - When adding properties to components, they can be accessed by the component using a single pair of curly braces, e.g. `{this.props.aPropertyThatGoesOnProps}` will return `x`
 - React components MUST implement the render method and `return` something
 - The `render` method returns a `React element` which is effectively a `lightweight` description of what to render
@@ -89,11 +90,15 @@ class MyPizza extends React.Component {
 
 - When a component has an action on it that calls `this.setState(...)` it forces the component to rerender by calling its `render` method
   - the `setState()` is inherited from React.Component
+  - `setState` takes and object and applies a patch to the current state, so it contains all of the current state plus any changes
+  - You should never change the state my directly manipulating it e.g. `this.state = this.state.name = 'blah'`
+  - state is managed from WITHIN a component, so should be private from change from any other component
   - any child component will also be rerendered
-- It looks as though you use props for the parent to pass on state(values) and behaviour(functions) while state should be used to store public or private data which you can choose to display or not(where the child component works out)
+- It looks as though you use props for the parent to pass on values and behaviour(functions) while state should be used to store public or private data which you can choose to display or not(where the child component works out)
+- You typically used state only if its managed by the current component only
 - Its pretty common to have a parent component to store state for a child component and forward properties or `props` to the child component to display the actual state
   - doing state this way allows you to store state in one place so that you could easily calculate business logic etc.
-  - When doing this and child component's need to run an action to update the parent's state, you simply provide the child component with a `props` that contains a function that the child component will need to execute. This function effectively becomes a clojure so any values sent with it will be within its own scope and will not change. So in this case, we send a function with a reference to the parentsFunction
+  - When doing this and child component's need to run an action to update the parent's state, you simply provide the child component with a `props` that contains a function that the child component will need to execute. This function effectively becomes a clojure so any values sent with it will be within its own scope and will not change, or any references to variables outside the scope. So in this case, we send a function with a reference to the parentsFunction
 
 ```
 class Parent extends React.Component {
@@ -109,8 +114,8 @@ class Parent extends React.Component {
 }
 ```
 
-Data immutability
-- Its recommended that in react, we don't mutate data but instead we treat it as immuatable and make copies with the changes
+#### Data and Immutability
+- Its recommended that in react, we don't mutate data but instead we treat it as immutatable and make copies with the changes
   - this is so that we change detect what the changes are easily
   - things become simpler
   - helps with detection for rerendering
@@ -119,6 +124,7 @@ Data immutability
   - so rather than creating a component that extends React.Component you just write a function that takes a `props` arg and returns the jsx `return (<button>...)` of what needs to be rendered
   - you would do this as it reduces the boiler plate of a component (writing a class etc)
   - when you do this, you refer to props as `props.x` rather than `this.props.x` AND you have a choice of no longer need to use parenthesis on any function call `onClick={props.aFunc}` rather than `onClick={() => this.props.aFunc() }`
+  - The difference between `props.aFunc` and `() => this.props.aFunc()` is that both actually return a function but the latter can cause performance issues, so try and limit that type of style.
 
 ```
 class Wheel extends React.Component {
@@ -160,6 +166,77 @@ const comp = (props) => {
 }
 ```
 
+- If you need to pass parameters to the handler function you need to do 2 things
+  - add the parameter argument to the function handler so the code has access to it
+  - when referencing the handler function in the `<tag>` `props` you need to do it differently and there are 2 ways
+    - call `bind` on the function you want to trigger with the arguments being the second argument onwards e.g. `this.aFuncHandler.bind(this, arg1, arg2)`. Where `this` references the component
+    - return an anonymous function using the arrow function syntax that calls the handler function with the param.
+
+```
+class App extends Component {
+
+  constructor(props){
+    super(props);
+    this.state = {
+      name: 'blah'
+    };
+  }
+
+  buttonClickHandler = (newName) => {
+    this.setState({
+      name: newName
+    });
+  }
+
+  render() {
+    return (
+      <div className='container'>
+        <p>name: {this.state.name}</p>
+        <button onClick="{this.buttonClickHandler.bind(this, "bob")}">button1</button> //use bind
+        <button onClick={(event) => this.buttonClickHandler("bobbie")}>button2</button> //return a function using arrow syntax
+      </div>
+      )
+  }
+
+}
+```
+
+- Two way binding is the binding of multiple events, e.g. bind to an update field event which also triggers an update somewhere else (parent component perhaps)
+
+```
+class App extends Component {
+  constructor(props){
+    super(props);
+    this.state = {
+      name: 'blah'
+    };
+  }
+
+  updateNameHandler = (event) => {
+    this.setState({
+      name: event.target.value     //the event.target is the tag element that triggered this call
+    });
+  }
+
+  render() {
+    return(
+      <Child updateNameFunc="{this.updateNameHandler}" currentName={this.state.name}/> //pass down the func reference to the child component AND the name in the state
+    );
+  }
+
+//child presentation component that needs to update the parent state
+const Child = (props) => {
+  return(
+    <div>
+      <input type="text" onClick={props.updateNameFunc} value={props.currentName}/> //two way binding here as we map this tag to two things, the onClick event AND the value
+    </div>
+  )
+}
+}
+```
+
+#### Lists
+
 - You can render lists of components by doing the following
 
 ```
@@ -175,24 +252,6 @@ for(let i = 0; i < 10; i++){
     )
 }
 this.props.myUnorderedListArray = result;
-```
-
-- Its possible to send not only text to child components but also HTML/JSX with a component/structured hiearchy. If you want to access these inner nodes of the component, you can access them via the `props.children` property
-
-```
-... //parent component
-return (
-  <ChildComponent aName="bah">Some very important text I want to send to the child</ChildComponent> //send some text or even some html
-  )
-
-...
-//child component
-return (
-  <p name={props.aName}>
-    <span>{props.children}<span> //access the text and wrap it into a span
-  </p>   
-  )
-
 ```
 
 - What this effectively does is create a list of first class javascript react objects, place them in a list and renders them as a list
@@ -211,8 +270,80 @@ return (
 - `key` is a reserved word (like `ref`) in react
   - you can't reference it directly from `props`
 
+#### Events
+- In normal JS, event properties to tags are usually all lower case, in React, is Camel e.g. `onClick` vs `onclick`
+- Its not required but handler methods that get triggered on these events should end with `Handler` eg. submitFormHandler = () => {...}
+- Always remember to use a reference to a method by NOT including the parenthesis in the JSF. e.g. `onClick={this.submitFormHandler}`
+- Some examples of well used events: (have a look here: https://reactjs.org/docs/events.html#supported-events)
+ - onPaste
+ - onDownKey
+ - onFocus / onBlur
+ - onChange / onSubmit
+ - onClick
+
+#### React Hooks
+- Before React v 16.8, the only way to change a component's state is to use the `setState` method. This has since changed and now you can use React Hooks to do so
+- It even works on functional/stateless components
+- Looks like it the THE modern standard in newer React apps
+- Just like everything else in JS, to use something, you first need to import it. `import { useState } from 'react'`
+  - `useState` is the hook that allows you to manage state in a functional component
+  - `useState` function when executed returns an array with 2 elements
+    - 1st element is the current state, e.g. the state is was set to after the execution of the hook
+    - 2nd element is a function to update the state so that we can update the state and have it rerender correctly
+    - The hook is typically used with array `Destructuring` where we create 2 new variables from the 2 elements and set them to local variables
+  - to use it, just call it as a method with an initial state
+- Just like classes functions can also have embedded functions/method too and just like classes you just add them to the encompassing object
+- One `VERY IMPORTANT` thing about the `setState` hook is that it DOES NOT merge state, instead it completely replaces it
+  - Unlike class based components, where you would normally have a single state with multiple properties, you can have multiple states in stateless functions using hooks that manage specific thing
+  - To get around this, You SHOULD NOT! manually manage merges by copying existing state into the update state function
+  - You should call `setState` multiple times to set initial states for all of the individual components of the state and then use the `currentState` element in the next call to any call to any other update function
+```
+//functional component
+const App = (props) => { //props is optional, could even write it as const app = props => {}
+  // use destructuring to set elements to variables
+  const [currentState, updateStateFunc] = useState({
+    message: 'Welcome to my app'
+    });
+
+  //create another property to the state, use the hook to create the current state and update functions
+  const [currentAgeState, updateAgeFunc] = useState({
+    myAge: 35
+    });
+
+  const onClickHandler = () => {
+    // update the state using the destructured variable, does not touch the `myAge` state
+    updateStateFunc({
+      message: 'This is a different welcome message'
+      });
+  }
+
+  return (
+    <p>
+      {currentState.message}
+    </p>
+    )
+}
+```
 
 #### MISC
 - When importing components, you don't need to specify the extension of the file e.g. `import {Person} from './Person/Person'`
   - This is because the bundler - webpack will add it in for you
   - Also when creating new Components, its because to define the files and folders with a Capital letter, this is just a convention
+
+- Its possible to send not only text to child components but also HTML/JSX with a component/structured hiearchy. If you want to access these inner nodes of the component, you can access them via the `props.children` property
+
+```
+... //parent component
+return (
+  <ChildComponent aName="bah">Some very important text I want to send to the child</ChildComponent> //send some text or even some html
+  )
+
+...
+//child component
+return (
+  <p name={props.aName}>
+    <span>{props.children}<span> //access the text and wrap it into a span
+  </p>   
+  )
+
+```
