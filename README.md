@@ -325,6 +325,59 @@ const App = (props) => { //props is optional, could even write it as const app =
 }
 ```
 
+#### Styling
+- Just like in normal CSS, there are 2 ways in which you can style your components
+  - inline
+  - separate css file
+
+- Using inline styles, you place the styles in the component file but rather than using normal css names and syntax
+  - Because its in JS, there are some limitations, you will need to use modified key names that are compatible with js property names eg. `background-color` is not a valid js property name for an object so you need to use `backgroundColor`
+  - Using inline styles are component specific so do not affect other components are they are not applied globally
+  - When referencing the style, because its a js variable you need to use the `style={<var name>}` syntax
+
+```
+...
+render() {
+  const personStyle = {
+    backgroundColor: 'black',
+    margin: '12px auto'
+  };
+
+  return ({
+    <div style='{personStyle}'>
+      ...
+    </div>
+  })
+}
+```
+
+- Separate CSS is another way, using this is just like normal css with all its features
+  - You'll need to reference it in the JS component file with `import './Person.css'`, doing this will add it to the actual html page as a script tag.
+  - You'll need to include the `.css` extension as webpack only works with js files
+  - It WONT merge the resulting css files thought
+  - Using this method will apply the css file globally, so ensure you write your target names well
+  - adding css this way will also have css prefixes generated and added for you, to fix styles on other browsers
+
+```
+//Person.css
+
+div.Person {
+  background-color: black;
+  margin: 12px auto;
+}
+
+//component
+import './Person.css'
+...
+render() {
+  return(
+      <div className="Person">
+      </div>
+  );
+}
+```
+
+
 #### MISC
 - When importing components, you don't need to specify the extension of the file e.g. `import {Person} from './Person/Person'`
   - This is because the bundler - webpack will add it in for you
