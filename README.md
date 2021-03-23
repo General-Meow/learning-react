@@ -235,12 +235,59 @@ const Child = (props) => {
 }
 ```
 
+#### Conditionals
+
+- You can conditionally render things in 2 ways with react
+  - use a javascript expression and put the content in an ternary operator
+    - you can only use simple expressions here that only return true or false, so you can't use block statements here e.g. `if {} else {}`
+    - don't use this too much, as it could lead to confusing jsx if you have multiple nested conditionals
+  - use a variable to hold the JSX and output that but conditionally set it in code (the js way)
+    - as the render method is executed every time the state changes, you can put the code here or you can reference a different method from there
+
+```
+//js expression
+return (
+  <div>
+    ... some content
+    { this.state.showContent ?
+      <div>
+        <p> some more conditional content </p>
+      </div>
+      : null
+    }
+  </div>
+  )
+```
+
+```
+render() {
+  const conditionalContent = null;
+
+  if(this.state.showContent) {
+    conditionalContent = (
+      <div>
+        <p>some more conditional content</p>
+      </div>
+    );
+  }
+
+  return(
+      <div>
+        {conditionalContent}
+      </div>
+  )
+}
+```
+
 #### Lists
 
 - You can render lists of components by doing the following
+  - what JSX will do when encountering an array is attempt the render them, this would work if you had a list of jsx elements
 
 ```
-<ol>{myUnorderedListArray}</ol> #unordered list pointing to an array
+<ol>
+  {myUnorderedListArray}
+</ol> #unordered list pointing to an array
 
 ...
 const result = [];
@@ -262,6 +309,7 @@ this.props.myUnorderedListArray = result;
     - moved if the index has changed
     - all in the idea of keeping react efficient
   - keys only need to be unique within its component instance and siblings
+  - You should try and use a key that isn't the `index` as removing or adding elements will suffle element after it so try and use something like the object ID e.g. persionId instead
 
 ```
 <li key={i}>index {i}</li>
@@ -269,6 +317,58 @@ this.props.myUnorderedListArray = result;
 
 - `key` is a reserved word (like `ref`) in react
   - you can't reference it directly from `props`
+
+- You can use an expression to output a list too
+  - The map method on arrays will provide the element as the first arg and the index as the second
+- Remember, when modifying lists, you should do it in an immutable fashion, which is to make a copy of the array, and apply the change then set the state with the new version
+
+```
+deleteThisIndex = (index) => {
+  //use new es6 spread operator to copy elements into a new array
+  const newArray = [
+    ...this.state.someArray
+  ];
+
+  newArray.splice(index, 1); //remove the element from the array
+
+  this.setState({
+    someArrayOfObject: newArray
+  });
+}
+
+updateName = (event, id) => {
+  const index = this.someArrayOfObject.findIndex(obj =>
+      return obj.id === id;
+    );
+
+    const newArray = [
+      ...this.state.someArrayOfObject
+    ];
+
+    newArray[index].name = event.target.value;
+
+    this.setState({
+      someArrayOfObject: newArray
+    });
+
+}
+
+render() {
+  return (
+      {
+        this.state.someArrayOfObject.map( (obj, index) => {
+          return (
+            <div>
+              <p key={obj.id} onClick={() => this.deleteThisIndex(index)}>{obj.name}<p>
+              <input type="text" onChange={(event) => this.updateName(event, obj.id)}></input>
+            </div>
+          )
+        });
+      }
+  )
+}
+```
+
 
 #### Events
 - In normal JS, event properties to tags are usually all lower case, in React, is Camel e.g. `onClick` vs `onclick`
@@ -298,6 +398,8 @@ this.props.myUnorderedListArray = result;
   - To get around this, You SHOULD NOT! manually manage merges by copying existing state into the update state function
   - You should call `setState` multiple times to set initial states for all of the individual components of the state and then use the `currentState` element in the next call to any call to any other update function
 ```
+import React, {useState} from 'react'
+
 //functional component
 const App = (props) => { //props is optional, could even write it as const app = props => {}
   // use destructuring to set elements to variables
@@ -377,6 +479,176 @@ render() {
 }
 ```
 
+- Dynamic styling can be done just like conditionals in the js code, you change the style based off stored properties in the state
+
+```
+render() {
+    const style = {};
+    if(selected) {
+      backgroundColor = 'green';
+    } else {
+      backgroundColor = 'red';
+    }
+    return(
+      <p style={style}>selected or not</p>
+      );
+}
+```
+
+- You can also set class names dynamically and provide a list of classes
+  - take note of the join in the usage, you could instead use join before the usage
+
+```
+render() {
+  const classes = [];
+  if(this.state.listOfPeople.length <= 2){
+    classes.push('red');
+  }
+  if(this.state.listOfPeople.length <= 1) {
+    classes.push('bold'); //at this point it would be red and bold
+  }
+
+  return (
+    <p className={classes.join(' ')}>some text</p>
+    )
+}
+```
+
+- pseudo selectors (ones with `:xxx` on the class name e.g. red:hover) and media queries are a little more difficult in js the colon messes with the inline styles, you will need to use a packing library
+  - there are 3 main ones/ways you can use
+    - Radium
+    - Styled Components
+    - CSS Modules                       
+  - For Radium:
+  - to fix this, we install a new package called: `radium` `npm install --save radium` to manage inline style elements
+  - ensure you wrap your class in Radium when you export, this makes it a `higher order component`, doing this will add extra functionality to the component, this works on both class based components and functional ones
+  - to use pseudo selectors with Radium, simply wrap the selector in quotes `const style = { ':hover': { backgroundColor: 'red' } }`
+  - for media queries, you must also wrap the main application in a `StyleRoot`
+
+```
+import Radium from 'radium';
+...
+
+class Blah extends React.Component {
+  ...
+  render() {
+    const allStyles = [];
+    const style = {
+      ':hover': {
+          backgroundColor: 'red'
+      }
+    };
+
+    const mediaQueryExample = {
+      '@media(min-width: 500px)' : {
+        width: '450px'
+      }
+    };
+    //if you want to change it after it was initialized
+    style[':hover'].backgroundColor = 'blue'; //because the hover property is invalid variable name, you have to use bracket notation with strings
+
+    allStyles.push(style);
+    allStyles.push(mediaQueryExample);
+
+    return(
+      <p style={allStyles}>Blah blah</p>
+      )
+  }
+}
+
+export default Radium(Blah); //higher order component
+
+//Main application
+import Radium, {StyleRoot} from 'radium';
+
+class App extends React.Component {
+  render() {
+    ...
+    return (
+      <StyleRoot>             // You must add this for media queries to work
+        <div></div>
+      </StyleRoot>
+    )
+  }
+}
+```
+
+- For StyleComponents
+  - `npm intall --save styled-components`
+  - for every type of component you can use in html, the is a method on the `styled` type  that represents it
+  - `styled.div... styled.p... `
+  - each of those methods returns a react component, so you can assign the result to a variable
+  - you'll need to use the backtick notation from standard js to provide a `template` in css
+  - the way we use backticks with styled components is to provide the styled component a template as a parameter
+  - You only put the css properties within the backticks
+  - Styled components get a generated class name applied
+  - Because they are react components, you can send `props` to them and use them to dynamically set styles using ternary operators
+  - Just like all other react components, you can apply event props to them like `onClick`
+
+
+```
+import styled from 'style-components';
+...
+
+class Blah extends React.Component {
+  ...
+  //create a div element with the styling
+  const MyStyledDiv = styled.div`
+     background-color: ${props => props.problem ? 'red' : 'green' };   //dynamic styling using props
+     width: 500px;
+
+     &:hover {
+       background-color: lightgreen;     // note here the & for pseudo selectors
+     }
+  `
+
+  render() {
+
+    return(
+      <MyStyledDiv problem={this.state.hasProblem}> //usage of the div with styling
+        <p style={allStyles}>Blah blah</p>
+      </MyStyledDiv>
+      )
+  }
+}
+
+export default Blah
+```
+
+- CSS modules
+  - One of the issues with the previous libs for css styling is that most tend to put the css in the js file, this can make things confusing and you don't get the benefits of your IDE like autocomplete
+  - CSS modules allow you to split out the CSS in its own file AND scope the style to a specific component
+  - CSS styles now go into a `<COMPONENT_NAME>.module.css`
+  - CSS styles now get a generated class name so it will only work on the defined component
+  - You must import the css using the syntax `import classes from './blah.css'`, doing this will assign all the style definitions to the `classes` variable for you to access in the js and assign to components
+
+```
+//MyComp.module.css
+.button {
+  ...
+}
+
+.red {
+  ...
+}
+
+...
+
+//component
+import classes from './MyComp.modules.css';
+...
+
+class MyComp extends React.Component {
+   render() {
+     return (
+        <div>
+          <p className={classes.red}></p>
+          <p className={classes.button}></p>
+        </div>
+    )
+   }
+}
+```
 
 #### MISC
 - When importing components, you don't need to specify the extension of the file e.g. `import {Person} from './Person/Person'`
