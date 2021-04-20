@@ -21,6 +21,8 @@ ReactDOM.render(
 - prop-types
   - modules that allows you to state/document what a component needs for it to work
   - `npm install --save prop-types`
+- Axios for http requests
+  - `npm install axios`
 
 
 ### Overview
@@ -976,17 +978,6 @@ export default Blah
   - CSS styles now get a generated class name so it will only work on the defined component
   - You must import the css using the syntax `import classes from './blah.css'`, doing this will assign all the style definitions to the `classes` variable for you to access in the js and assign to components
 
-- Assets
-  - You can't just refer to images or other assets in your JSX as something like `<img src='../../assets/x.jpg'/>` as these sort of files won't be in the same directory structure when you package the application up for production.
-  - To fix this you will need to make webpack aware that you want to use assets much like you do with css
-
-```
-import logo from '../../assets/logo.png'
-...
-const logo = (props) => (
-    <img src={logo}/>
-);
-```
 
 ```
 //MyComp.module.css
@@ -1014,6 +1005,44 @@ class MyComp extends React.Component {
     )
    }
 }
+```
+
+- Assets
+  - You can't just refer to images or other assets in your JSX as something like `<img src='../../assets/x.jpg'/>` as these sort of files won't be in the same directory structure when you package the application up for production.
+  - To fix this you will need to make webpack aware that you want to use assets much like you do with css
+
+```
+import logo from '../../assets/logo.png'
+...
+const logo = (props) => (
+    <img src={logo}/>
+);
+```
+
+#### HTTP / Ajax
+- JS has `XMLHttpRequest` which allows you to make http requests
+- Using `XMLHttpRequest` can be combersome because its pretty low level, you can use a number of other third party packages to make http requests. One of which is `Axios`
+- `Axios` is a promise based http client. Can be installed with `npm install axios`
+- If you'd like to stick to the basic's / standards then perhaps look into using `fetch` API
+- When you need to make a HTTP request to call an endpoint for data, the call should typically be made in the `componentDidMount` lifecycle hook
+  - this will cause the component to render twice (seeing as the method runs after a render) but it will only render to the user once
+- Have a look the the `http--01-starting-setup` subfolder to see an example
+- Axios has a number of methods that repressent the standard request methods, the `get` method at its most basic just requires the URL to make the request to
+```
+import axios from 'axios';
+...
+
+class ... {
+  componentDidMount() {
+    axios.get('http://...').then(response => console.log(response));
+  }
+}
+```
+
+- Because axios is promise based, you can handle errors easily with the `catch` method
+
+```
+axios.get('error triggering url').then(response => console.log(response)).catch(error => console.log('error', error));
 ```
 
 #### Debugging
